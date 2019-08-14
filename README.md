@@ -10,6 +10,7 @@ Prerequisite
 Download and install LTP model: [LTP](http://ltp.ai/docs/index.html) which consists of two parts:ltp and ltp_data. Here we make use of ltp_data(in version 3.4.0).
 
 >install the sub module by pip:  `pip install pyltp`
+                                 `pip install gensim`
 
 The LIBSVM model(version 3.23): [LIBSVM](https://www.csie.ntu.edu.tw/~cjlin/libsvm/) has already been concluded in _./code_.
 
