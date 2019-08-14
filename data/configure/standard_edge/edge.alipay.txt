@@ -1,0 +1,156 @@
+>> edge
+edge number: 1
+sender: 商户客户端
+receiver: 商户服务器
+content: 请求订单信息|订单信息|支付请求
+call:
+response:5
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 2
+sender: 商户客户端
+receiver: 商户服务器
+content: 请求订单信息|需要的参数|订单信息|支付请求
+call:
+response:6
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 3
+sender: 商户客户端
+receiver: 支付渠道
+content: 支付请求
+call:
+response:
+parameter:金额|收款人
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 4
+sender: 商户客户端
+receiver: 第四方服务器
+content: 请求订单信息|订单信息|支付请求|下单|支付
+call:
+response:11
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 5
+sender: 商户服务器
+receiver: 商户客户端
+content: 签名后的订单信息|订单信息
+call:1
+response:
+parameter:
+parameter from:13
+ask for api:False
+<< end
+
+>> edge
+edge number: 6
+sender: 商户服务器
+receiver: 商户客户端
+content: 签名后的订单信息|订单信息|需要的参数|加密数据
+call:2
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 7
+sender: 商户服务器
+receiver: 第四方服务器
+content: 下单|请求订单信息|支付请求
+call:
+response:13
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 8
+sender: 商户服务器
+receiver: 第四方服务器
+content: 支付结果
+call:
+response:12
+parameter:金额|收款人|notify_id
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 9
+sender: 支付渠道
+receiver: 商户服务器
+content: 支付结果
+call:
+response:
+parameter:金额|收款人|notify_id
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 10
+sender: 支付渠道
+receiver: 第四方服务器
+content: 支付结果|异步返回结果
+call:
+response:
+parameter:金额|收款人|notify_id|支付宝异步通知
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 11
+sender: 第四方服务器
+receiver: 商户客户端
+content: 签名后的订单信息
+call:4
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 12
+sender: 第四方服务器
+receiver: 商户服务器
+content: 支付结果|异步通知
+call:8
+response:
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 13
+sender: 第四方服务器
+receiver: 商户服务器
+content: 签名后的订单信息
+call:7
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+>> edge

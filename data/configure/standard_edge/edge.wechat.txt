@@ -1,0 +1,179 @@
+>> edge
+edge number: 1
+sender: 商户客户端
+receiver: 商户服务器
+content: 请求生成支付订单|提交订单|支付请求|订单信息
+call:
+response:6
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 2
+sender: 商户客户端
+receiver: 商户服务器
+content: 请求生成支付订单|提交订单|需要的参数|支付请求|订单信息
+call:
+response:5
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 3
+sender: 商户客户端
+receiver: 支付渠道
+content: 支付请求
+call:
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 4
+sender: 商户客户端
+receiver: 第四方服务器
+content: 请求生成支付订单|提交订单|支付请求|支付|订单信息|下单
+call:
+response:12
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 5
+sender: 商户服务器
+receiver: 商户客户端
+content: 预付单信息|支付凭证|需要的参数|加密串
+call:2
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 6
+sender: 商户服务器
+receiver: 商户客户端
+content: 预付单信息|支付凭证
+call:1
+response:
+parameter:
+parameter from:14
+ask for api:False
+<< end
+
+>> edge
+edge number: 7
+sender: 商户服务器
+receiver: 第四方服务器
+content: 支付结果
+call:
+response:13
+parameter:金额
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 8
+sender: 商户服务器
+receiver: 第四方服务器
+content: 请求生成支付订单|下单|提交订单|支付请求|订单信息
+call:
+response:14
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 9
+sender: 支付渠道
+receiver: 商户服务器
+content: 支付结果
+call:
+response:
+parameter:金额
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 10
+sender: 支付渠道
+receiver: 第四方服务器
+content: 支付结果
+call:
+response:
+parameter:金额|微信异步通知
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 11
+sender: 支付渠道
+receiver: 第四方服务器
+content: 预付单信息|支付凭证
+call:15
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 12
+sender: 第四方服务器
+receiver: 商户客户端
+content: 预付单信息|支付凭证
+call:4
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 13
+sender: 第四方服务器
+receiver: 商户服务器
+content: 支付结果|异步通知
+call:7
+response:
+parameter:
+parameter from:
+ask for api:True
+<< end
+
+>> edge
+edge number: 14
+sender: 第四方服务器
+receiver: 商户服务器
+content: 预付单信息|支付凭证
+call:8
+response:
+parameter:
+parameter from:
+ask for api:False
+<< end
+
+>> edge
+edge number: 15
+sender: 第四方服务器
+receiver: 支付渠道
+content: 调用统一下单API
+call:
+response:11
+parameter:金额
+parameter from:
+ask for api:False
+<< end

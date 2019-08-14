@@ -1,0 +1,21 @@
+content:支付Charge,Charge对象,Charge,charge,transid信息
+replace:支付凭据
+---
+content:Webhooks 通知,Webhook请求,webhook请求,Webhooks,Webhook,webhooks,webhook
+replace:支付结果
+---
+content:Ping++,付钱拉,爱贝,BeeCloud,66支付,Trpay,联动,联动优势平台
+replace:第四方
+---
+content:给
+replace:到
+---
+content:URL
+replace:回调地址
+---
+content:组装
+replace:将
+---
+content:配置在管理平台上,主动
+replace:
+---
