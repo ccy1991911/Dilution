@@ -1,16 +1,9 @@
 # coding:utf-8
-PN=4
-test=0
-version='0813'
-guess_party=0
-print_match=0
-print_edges=0
-
-
 import csv
 import re
-import os
 from similarity import *
+from pyltp import SentenceSplitter
+
 
 class State():
 
@@ -25,15 +18,18 @@ class State():
         self.content = ''
 
         self.id_in_kb = None
+        self.wechat_en = None
+        self.alipay_en = None
 
         self.api_interface = ''
         self.send_parameter = ''
         self.receive_parameter = ''
 
-        self.checkpoint = ''
+        self.check = ''
 
         self.feature = []
         self.label = -1
+
 
 # result: [edge number, sender, receiver, [content]]
 # results: [result]
@@ -60,7 +56,6 @@ def read_edges(filename):
     return results
 
 
-
 def party_id(party):
     if party.count('商户客户端')>0: return 0
     if party.count('商户服务器')>0: return 1
@@ -68,6 +63,7 @@ def party_id(party):
     if party.count('第四方')>0: return 3
     if party.count('服务器')>0: return 4
     return -1
+
 
 def id_party(id):
     if id==0: return '商户客户端'
@@ -138,7 +134,6 @@ def find_party(party,party_type,id,r_content,edges):
     return found_party_ids
 
 
-
 def edge_matching(edges,sender_id,receiver_id,content):
     e_ns, sim_edge, can_edges, can_ens, = [],[], [], []
     ens=''
@@ -153,6 +148,7 @@ def edge_matching(edges,sender_id,receiver_id,content):
                 can_edges.append([edge_number,edge_content])
                 if edge_number not in can_ens:
                     can_ens.append(edge_number)
+
     if len(can_ens)==1:
         en=can_edges[0][0]
         e_content=can_edges[0][1]
@@ -160,46 +156,29 @@ def edge_matching(edges,sender_id,receiver_id,content):
         for i in range(len(can_edges)):
             e_content=can_edges[i][1]
             cos_sim= similarity(e_content,content)
-            if print_match:
-                print "single:", en, ' ', e_content, ' ', content, ' ', cos_sim, ' ', sim_thresh
+            if cos_sim>sim_thresh: return en
 
-            if cos_sim>sim_thresh:
-
-                return en
     elif len(can_ens)>1:
         for en in can_ens:
-
             for i in range(len(can_edges)):
                 if can_edges[i][0]==en:
                     e_content=can_edges[i][1]
                     sim_thresh = make_thresh(e_content, content)
                     cos_sim=similarity(e_content,content)
-                    if print_match:
-                        print "multi", en, ' ', e_content, ' ', content, ' ', cos_sim
                     if cos_sim>=max_sim and cos_sim>sim_thresh:
-
                         sim_edge.append([cos_sim,en])
                         max_sim=cos_sim
+
         for i in range(len(sim_edge)):
             if sim_edge[i][0]==max_sim:
                 if sim_edge[i][1] not in e_ns:
                     e_ns.append(sim_edge[i][1])
         for i in range(len(e_ns)):
-
             ens += e_ns[i]
             if i < len(e_ns)-1:
                 ens += '|'
+
         return ens
-
-def print_edge(edges):
-    for edge in edges:
-        edge_number = edge[0]
-        edge_sender_id, edge_receiver_id, edge_contents = party_id(edge[1]), party_id(edge[2]), edge[3]
-        print '[',edge_number,']',edge_sender_id,':',edge_receiver_id,
-        for content in edge_contents:
-            print content,
-        print '\r'
-
 
 
 def writeFileMatchStandardEdge(f,edge_id,o_sentence,sentence,sender,receiver,content,sender_type,receiver_type,a_en,we_en,platform,api_name):
@@ -222,6 +201,7 @@ def writeFileMatchStandardEdge(f,edge_id,o_sentence,sentence,sender,receiver,con
     w.writerow(['wechat parameter receive:'])
     w.writerow(['<< end'])
     f.write('\n')
+
 
 def edge_assign(edge,edge_id,o_sentence,sentence,content,sender_type,receiver_type,a_en,we_en,api_name):
     edge.edge_id = edge_id
@@ -263,6 +243,7 @@ def readFromFSM(filename):
             results.append([ek,em,sender,receiver,contents_k,content,api,ask])
     return results
 
+
 def readApiList(platform):
     data=[]
     filename='../data/input/apiList/'+platform+'.txt'
@@ -293,6 +274,16 @@ def writeFileAPI(edge_id,f,result,api):
     f.write('<< end\n\n')
 
 
+def extract_api(string):
+    api=''
+    if len(string)>0:
+        api=string
+        if string.count('的')>1:
+            pattern=re.compile('的.*的',re.S)
+            api=re.findall(pattern,string)
+        api=api[0].replace('的','')
+    return api
+
 
 def makeThreshAPI(c1,c2):
     if c1.count('支付')>0 and c2.count('支付')>0 and len(c1)==len(c2):
@@ -301,18 +292,6 @@ def makeThreshAPI(c1,c2):
         thresh=0.87
 
     return thresh
-
-
-def extract_api(string):
-    api=''
-    if len(string)>0:
-        api=string
-        if string.count('的')>1:
-            pattern=re.compile('的.*的',re.S)
-
-            api=re.findall(pattern,string)
-        api=api[0].replace('的','')
-    return api
 
 
 def makeThreshForParameter(c1,c2):
@@ -366,16 +345,21 @@ def checkParameterInAllApis(platform):
 
                 with open(resultdir + platform + '/' + filename, 'w') as f:
                     # 支付状态|订单金额|实付金额|签名|支付凭据|收款人
-                    if 0 in parameter_result: f.write('支付状态')
-                    f.write('|')
-                    if 1 in parameter_result: f.write('订单金额')
-                    f.write('|')
-                    if 2 in parameter_result: f.write('实付金额')
-                    f.write('|')
-                    if 3 in parameter_result: f.write('签名')
-                    f.write('|')
-                    if 4 in parameter_result: f.write('支付凭据')
-                    f.write('|')
+                    if 0 in parameter_result:
+                        f.write('支付状态')
+                        f.write('|')
+                    if 1 in parameter_result:
+                        f.write('订单金额')
+                        f.write('|')
+                    if 2 in parameter_result:
+                        f.write('实付金额')
+                        f.write('|')
+                    if 3 in parameter_result:
+                        f.write('签名')
+                        f.write('|')
+                    if 4 in parameter_result:
+                        f.write('支付凭据')
+                        f.write('|')
                     if 5 in parameter_result: f.write('收款人')
 
 
@@ -393,10 +377,45 @@ def readResponse(thirdparty):
     return response
 
 
+def getOriginalSentence(id,third,Edges):
+    sentences = []
+    for edge in Edges:
+
+        if third =='alipay':
+            if edge.alipay_en == id:
+
+                sentences.append(edge.original_sentence)
+        else:
+            if edge.wechat_en == id:
+                sentences.append(edge.original_sentence)
+    return sentences
 
 
-def  writeFSMwithParameter(FSMwApis, f):
+def getSRforFSM(sr_in_doc,sr_in_api,fsm,third,platform,Edges):
+
+    # from payment document
+    pay_sentences = getOriginalSentence(fsm.id_in_kb,third,Edges)
+    document = open('../data/input/payDocument/'+platform+'.txt').readlines()
+
+    for paragraph in document:
+        sentences=SentenceSplitter.split(paragraph)
+        for pay_sentence in pay_sentences:
+            for i, s in enumerate(sentences):
+                realm = len(sentences)
+                if pay_sentence == s:
+                    for r in range(i,realm):
+                        if sentences[r] in sr_in_doc.keys():
+                            fsm.check = sr_in_doc[sentences[r]]
+    # from api
+    if fsm.api_interface != '' and fsm.api_interface in sr_in_api.keys():
+        fsm.check = sr_in_api[fsm.api_interface]
+
+    return fsm
+
+
+def  writeFSMwithParameterAndCheck(FSMwApis, f,sr_in_doc,sr_in_api,third,platform,Edges):
     for edge_id,fsm in enumerate(FSMwApis):
+        fsm = getSRforFSM(sr_in_doc,sr_in_api,fsm,third,platform,Edges)
         f.write('>> edge: ' + str(edge_id) + '\n')
         f.write('edge number in knowledgebase:' + fsm.id_in_kb + '\n')
         f.write('sender:' + fsm.sender + '\n')
@@ -405,6 +424,8 @@ def  writeFSMwithParameter(FSMwApis, f):
         f.write('api interface:' + fsm.api_interface + '\n')
         f.write('send parameter:' + fsm.send_parameter + '\n')
         f.write('receive parameter:' + fsm.receive_parameter + '\n')
+        f.write('check:' + fsm.check + '\n')
         f.write('<< end\n\n')
+
 
 
