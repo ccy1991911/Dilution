@@ -1,7 +1,0 @@
-
-Quick Start
-===========
-Usage: run main.py <syndicator name> to get the analysis information
-Input file: The input files are in the ./data/input folder.
-            Put the document for payment process in ./data/input/payDocument, the list of website API in ./data/input/apiList, and the parameter description of each API in ./data/input/apiDescription.
-Data format: the required data format is shown in the sample of "Beecloud".
