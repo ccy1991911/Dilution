@@ -346,6 +346,16 @@ def addResponseParameter(FSMwApis,response_id,response_api):
                     f.receive_parameter = pstr
     return FSMwApis
 
+
+def deletedirs(d):
+    for root, dirs, files in os.walk(d):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        for dir in dirs:
+            deletedirs(os.path.join(root,dir))
+    if os.path.exists(d):os.removedirs(d)
+
+
 # default settings
 LTP_DATA_DIR='../../Documents/ltp_data_v3.4.0'
 platform = 'BeeCloud'
@@ -393,7 +403,7 @@ if __name__ == '__main__':
             r.content = content[1] if len(content) > 1 else content
             if not ((r.sender == 'None' or r.sender == '其他') and (r.receiver == 'None' or r.receiver == '其他')):
                 validRecords.append(r)
-
+    makedir('../data/tmp')
     PRINT_RECORD = 0
     if PRINT_RECORD:
         for r in validRecords:
@@ -456,7 +466,7 @@ if __name__ == '__main__':
         makedir("../data/tmp/FSMwithParameterandSR/")
         with open("../data/tmp/FSMwithParameterandSR/" + filename, 'w') as f:
             writeFSMwithParameterAndCheck(FSMwApis,f,sr_in_doc,sr_in_api,thirdPaymentName,syndicationName,Edges)
-            
+
         """
         '''predict logic vulnerability '''
         from predictLogicVulnerability import *
@@ -470,6 +480,11 @@ if __name__ == '__main__':
 
         identifyLogicVunlerability(thirdPaymentName)
         """
+
+    deletedirs("../data/tmp/extensionFSM")
+    deletedirs("../data/tmp/FSMwithAPI")
+    deletedirs("../data/tmp/parameter")
+    deletedirs("../data/tmp/matchStandardEdge")
 
 
 segmentor.release()
