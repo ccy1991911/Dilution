@@ -9,7 +9,6 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-PRINT_RECORD=0
 
 modifier=filetolist('../data/configure/modifier.txt')
 
@@ -62,7 +61,10 @@ def preprocess(filename,content):
     for word in modifier: content = content.replace(word, '')
 
     return content
-def parse_sentence():
+
+
+# process senteces of payment process and security requirement
+def parse_sentence(require):
 
     sentence = preprocess('../data/configure/content_replace', o_sentence)
     sentence = sentence.replace(platform, "第四方")
@@ -74,7 +76,7 @@ def parse_sentence():
     relation = [arc.relation for arc in arcs]  # extract relation
     #heads = ['Root' if id == -1 else words[id] for id in rely_id]  # head word
 
-    # extract predicates
+    # extract sender, receiver, content in a payment process sentence
     send_ids,receive_ids, call_id, invoke_id = [], [], -1 , -1
     for i in range(len(words)):
         if postags[i] == 'v':
@@ -84,6 +86,32 @@ def parse_sentence():
             elif verb_type(words[i]) == 3:   invoke_id = i
     if len(send_ids) == 0: send_ids.append(-1)
     if len(receive_ids) == 0: receive_ids.append(-1)
+
+    #extract security requirement
+
+
+    verbs = [words[i] for i in range(len(words)) if postags[i] == 'v']
+
+    types=['金额','签名']
+    if o_sentence.count('验签')>0: require[o_sentence] = '签名'
+    verify_p = list(set([x for x in verify_verbs if x in verbs]))
+    if_match = [x for x in consistent if x in words]
+    if len(verify_p) > 0:
+        end = 0
+        for m in if_match:
+            if words.index(m) > end:
+                end = words.index(m)
+        for p in verify_p:
+            begin = words.index(p)
+            for i in range(begin, end):
+                for j in range(len(check_contents)):
+                    if words[i] in check_contents[j] :
+                        if sentence not in require.keys():
+
+                            require[o_sentence] = types[j]
+                        elif types[j] != require[o_sentence]:
+                            require[o_sentence] += ('|'+types[j])
+
     return sentence, words, rely_id, relation, send_ids, receive_ids, call_id, invoke_id
 
 
@@ -126,14 +154,14 @@ def matchStandardEdge(r,f):
                     alipay_en = edge_matching(alipay_edges, sender_type_id, g_receiver_id, content)
                     wechat_en = edge_matching(wechat_edges, sender_type_id, g_receiver_id, content)
                     if alipay_en and wechat_en:
-                        '''
+
                         edge = State()
                         edge_assign(edge,edge_id, o_sentence, sentence,content,
                                      id_party(sender_type_id),
                                      id_party(g_receiver_id), alipay_en, wechat_en, api_name)
 
                         Edges.append(edge)
-                        '''
+
                         writeFileMatchStandardEdge(f,edge_id, sentence, o_sentence, sender, receiver, content, id_party(sender_type_id),
                          id_party(g_receiver_id), alipay_en, wechat_en, platform, api_name)
 
@@ -145,12 +173,12 @@ def matchStandardEdge(r,f):
                     alipay_en = edge_matching(alipay_edges, g_sender_id, receiver_type_id, content)
                     wechat_en = edge_matching(wechat_edges, g_sender_id, receiver_type_id, content)
                     if alipay_en and wechat_en:
-                        '''
+
                         edge = State()
                         edge_assign(edge, edge_id, o_sentence, sentence, content,
                                     id_party(g_sender_id), id_party(receiver_type_id), alipay_en, wechat_en, api_name)
                         Edges.append(edge)
-                        '''
+
                         writeFileMatchStandardEdge(f,edge_id, sentence, o_sentence,sender, receiver, content, id_party(g_sender_id),
                          id_party(receiver_type_id), alipay_en, wechat_en, platform, api_name)
                         edge_id += 1
@@ -160,12 +188,12 @@ def matchStandardEdge(r,f):
             wechat_en = edge_matching(wechat_edges, sender_type_id, receiver_type_id, content)
 
             if alipay_en and wechat_en:
-                '''
+
                 edge = State()
                 edge_assign(edge, edge_id, o_sentence, sentence, content,
                             id_party(sender_type_id),id_party(receiver_type_id), alipay_en, wechat_en, api_name)
                 Edges.append(edge)
-                '''
+
                 writeFileMatchStandardEdge(f,edge_id, sentence, o_sentence,sender, receiver, content, id_party(sender_type_id),
                                          id_party(receiver_type_id), alipay_en, wechat_en,platform,api_name)
                 edge_id += 1
@@ -197,6 +225,48 @@ def createFSMwApi(edge_id,result,api):
     return FSM
 
 
+def checkSRinApi(platform,third):
+    require = dict()
+    require_sentence = []
+    for parent, dirs, filenames in os.walk("../data/input/apiDescription/" + platform):
+        for filename in filenames:
+            if filename.startswith('.'): continue
+            parameter_result = []
+            p_list = filetolist("../data/input/apiDescription/" + platform + "/" + filename)
+            api = filename.split('-')[0]
+            thirdpayment = filename.split('-')[1]
+            if thirdpayment != third:
+                continue
+            for p in p_list:
+                description = p.split('***')[-1]
+                words = list(segmentor.segment(description))
+                postags = postagger.postag(words)
+                arcs = parser.parse(words, postags)
+                rely_id = [arc.head - 1 for arc in arcs]  # extract head id
+                relation = [arc.relation for arc in arcs]
+                verbs = [words[i] for i in range(len(words)) if postags[i] == 'v']
+
+                types = ['金额', '签名', '收款人','notify_id']
+                if description.count('验签') > 0: require[api] = '签名'
+                verify_p = list(set([x for x in verify_verbs if x in verbs]))
+                if_match = [x for x in consistent if x in words]
+
+                if len(verify_p) > 0:
+                    end = 0
+                    for m in if_match:
+                        if words.index(m) > end:
+                            end = words.index(m)
+                    for p in verify_p:
+                        begin = words.index(p)
+                        for i in range(begin, end):
+                            for j in range(len(check_contents)):
+                                if words[i] in check_contents[j] and description not in require_sentence:
+
+                                    require_sentence.append(description)
+                                    require[api] += types[j]
+                                    require[api] += '|'
+    return require
+
 
 def match_api_interface(result,f):
     global edge_id
@@ -225,7 +295,9 @@ def match_api_interface(result,f):
             sim = max(sim1, sim2)
             thresh = makeThreshAPI(api_r, can_api_r)
 
-            if sim > max_sim and sim > thresh: api_name, max_sim = can_api, sim
+            if sim > max_sim and sim > thresh:
+                api_name, max_sim = can_api, sim
+                #print  '    candidate api:', can_api_r, 'content:', content_r, "api:", api, '|similarity:', sim
 
             for e_content in e_contents:
                 sim = 0
@@ -233,11 +305,14 @@ def match_api_interface(result,f):
                 if len(e_content) > 0:
                     sim = similarity(e_content, can_api_r)
                     thresh = makeThreshAPI(e_content, can_api_r)
-                if sim > max_sim and sim > thresh: api_name, max_sim = can_api, sim
+                if sim > max_sim and sim > thresh:
+                    api_name, max_sim = can_api, sim
+                    #print  '    candidate api:', can_api_r, 'e_content:', e_content, ' ', '|similarity:', sim, 'thresh:', thresh
 
         if max_sim > thresh:
             FSM = createFSMwApi(edge_id, result, api_name)
             FSMwApis.append(FSM)
+            #print api_name
             writeFileAPI(edge_id, f, result, api_name)
             edge_id += 1
         else:
@@ -271,21 +346,27 @@ def addResponseParameter(FSMwApis,response_id,response_api):
                     f.receive_parameter = pstr
     return FSMwApis
 
+# default settings
+LTP_DATA_DIR='../../Documents/ltp_data_v3.4.0'
+platform = 'BeeCloud'
 
 if __name__ == '__main__':
 
-    platform = 'BeeCloud'
+    if len(sys.argv)>1:
+        platform = sys.argv[1]
+        LTP_DATA_DIR = sys.argv[2]
 
-    '''extract conponents from sentence'''
+    '''extract conponents<sender, receiver, content> from sentence'''
     Records = []
     filename = os.path.join('../data/input/payDocument/', platform + '.txt')
     document = filetolist(filename)
+    sr_in_doc = dict()
     for paragraph in document:
         sentences=SentenceSplitter.split(paragraph)
+
         for o_sentence in sentences:
             records = []
-            sentence, words, rely_id, relation, send_ids, receive_ids, call_id, invoke_id = parse_sentence()
-            #print sentence,send_index,receive_index,call_index,invoke_index
+            sentence, words, rely_id, relation, send_ids, receive_ids, call_id, invoke_id = parse_sentence(sr_in_doc)
 
             for s_id in send_ids:
                 for r_id in receive_ids:
@@ -302,17 +383,25 @@ if __name__ == '__main__':
 
     validRecords = []
 
+    # delete invalid records
     for i,r in enumerate(Records):
-        if 'Not Found' not in r.content:
+        if 'Not Found' not in r.content :
             if not ((r.sender == 'None' or r.sender == '其他') and  (r.receiver == 'None' or r.receiver == '其他')):
                 validRecords.append(r)
+        elif  r.api_name != '':
+            content = r.api_name.split('的')
+            r.content = content[1] if len(content) > 1 else content
+            if not ((r.sender == 'None' or r.sender == '其他') and (r.receiver == 'None' or r.receiver == '其他')):
+                validRecords.append(r)
+
+    PRINT_RECORD = 0
     if PRINT_RECORD:
         for r in validRecords:
             print_record(r)
 
     ''' match with the standard edge summarized from third payment'''
     from match import *
-    #Edges = []
+    Edges = []
     edge_id = 0
     alipay_edges = read_edges('../data/configure/standard_edge/edge.alipay.txt')
     wechat_edges = read_edges('../data/configure/standard_edge/edge.wechat.txt')
@@ -325,10 +414,8 @@ if __name__ == '__main__':
     ''' check the parameters related with security requirement in each API'''
     checkParameterInAllApis(platform)
 
-
-
     '''get FSM extension'''
-    from findExtensionFSM import *
+    from findExtensionFSMs import *
     makedir('../data/tmp/extensionFSM')
     thirdPaymentNames = ['alipay', 'wechat']
     syndicationName = platform
@@ -340,7 +427,7 @@ if __name__ == '__main__':
 
         '''match API for each FSM'''
         filename = "%s.%s.txt"%(syndicationName , thirdPaymentName)
-        FSMs = readFromFSM("../data/tmp/FSM/"+filename)
+        FSMs = readFromFSM("../data/tmp/extensionFSM/"+filename)
         api_list = readApiList(platform)
         sen_api = []
         # [ek,em,sender,receiver,contents_k,content,api,ask]
@@ -351,32 +438,38 @@ if __name__ == '__main__':
             for FSM in FSMs:
                 match_api_interface(FSM,f)
 
+        '''check security requirement in api'''
+        sr_in_api = checkSRinApi(platform, thirdPaymentNames)
+
         '''add parameter for the response edge'''
         responses = readResponse(thirdPaymentName)
 
+
         for f in FSMwApis:
+
             if responses[str(f.id_in_kb)]!='':
                 response_id = responses[str(f.id_in_kb)]
                 response_api = f.api_interface
                 FSMwApis = addResponseParameter(FSMwApis,response_id,response_api)
-        makedir("../data/tmp/FSMwithParameter/")
-        with open("../data/tmp/FSMwithParameter/" + filename, 'w') as f:
-            writeFSMwithParameter(FSMwApis,f)
 
 
+        makedir("../data/tmp/FSMwithParameterandSR/")
+        with open("../data/tmp/FSMwithParameterandSR/" + filename, 'w') as f:
+            writeFSMwithParameterAndCheck(FSMwApis,f,sr_in_doc,sr_in_api,thirdPaymentName,syndicationName,Edges)
+            
+        """
+        '''predict logic vulnerability '''
+        from predictLogicVulnerability import *
+        readThirdPaymentBasicEdge(thirdPaymentName)
 
+        readPreconfigInformation(thirdPaymentName, syndicationName)
+        print('Possesion:', Possesion, '\n')
 
+        readSyndicationDocumentationEdge(thirdPaymentName, syndicationName)
+        print(SyndicationDocumentationEdge)
 
-
-
-
-
-
-
-
-
-
-
+        identifyLogicVunlerability(thirdPaymentName)
+        """
 
 
 segmentor.release()
