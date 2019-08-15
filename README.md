@@ -1,10 +1,5 @@
 # Dilution
 
-We will release the tool and source code of Dilution by the start of the 28th USENIX Security Symposium, 2019.
-
-Expect our release!
-
-
 Prerequisite
 ============
 Download and install LTP model: [LTP](http://ltp.ai/docs/index.html) which consists of two parts:ltp and ltp_data. Here we make use of ltp_data(in version 3.4.0).
@@ -40,7 +35,7 @@ Input & Data format:
 In this project we utilized 'Alipay' and 'Wechat' as the third payment.  
 
 Output:
-> The prediction result of logic vulnerability prediction is in _'./result'_
+> The prediction result of logic vulnerability prediction is in _'./data/output/result'_
 
 
 
